@@ -1,0 +1,9 @@
+<apex:page controller="ChecklistController" sidebar="false" standardStylesheets="false">
+<html>
+<head>
+    <title>Shift Checklist</title>
+    <apex:stylesheet value="{!URLFOR($Resource.checklistResources, 'css/styles.css')}"/>
+</head>
+<body class="slds-scope">Checklist Visualforce Page</body>
+</html>
+</apex:page>
