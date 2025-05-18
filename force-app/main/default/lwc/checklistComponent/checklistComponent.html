@@ -1,3 +1,59 @@
 <template>
-    <lightning-card title="Checklist"></lightning-card>
+    <lightning-card title="Shift Checklist" icon-name="standard:task">
+        <div class="slds-p-around_medium">
+            <lightning-combobox
+                label="Shift Type"
+                value={selectedShift}
+                options={shiftOptions}
+                onchange={handleShiftChange}>
+            </lightning-combobox>
+            
+            <template if:true={checklistItems}>
+                <div class="slds-m-top_medium">
+                    <table class="slds-table slds-table_bordered">
+                        <thead>
+                            <tr>
+                                <th>Task</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template for:each={checklistItems} for:item="item">
+                                <tr key={item.Id}>
+                                    <td>{item.Name}</td>
+                                    <td>
+                                        <lightning-input 
+                                            type="checkbox" 
+                                            label="Completed"
+                                            checked={item.isCompleted}
+                                            data-id={item.Id}
+                                            onchange={handleCheckboxChange}>
+                                        </lightning-input>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="slds-m-top_medium">
+                    <lightning-input 
+                        type="text" 
+                        label="Your Signature" 
+                        value={signature}
+                        onchange={handleSignatureChange}>
+                    </lightning-input>
+                </div>
+                
+                <div class="slds-m-top_medium">
+                    <lightning-button 
+                        label="Submit Checklist" 
+                        variant="brand" 
+                        onclick={handleSubmit}
+                        disabled={isSubmitDisabled}>
+                    </lightning-button>
+                </div>
+            </template>
+        </div>
+    </lightning-card>
 </template>
