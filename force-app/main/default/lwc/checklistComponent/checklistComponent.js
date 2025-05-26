@@ -1,13 +1,19 @@
-import { LightningElement, track } from 'lwc';
+import { LightningElement, track, api } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 import getChecklistItems from '@salesforce/apex/ChecklistController.getChecklistItems';
 import saveChecklist from '@salesforce/apex/ChecklistController.saveChecklist';
 import getCurrentShift from '@salesforce/apex/ChecklistController.getCurrentShift';
+import getUserInfo from '@salesforce/apex/ChecklistController.getUserInfo';
 
 export default class ChecklistComponent extends LightningElement {
     @track checklistItems = [];
     @track selectedShift;
     @track signature = '';
+    @track userName = '';
+    @track isLoading = true;
+    @track hasCompletedChecklist = false;
+    @track completedDate;
+    @track completedBy;
     
     get shiftOptions() {
         return [
@@ -20,33 +26,51 @@ export default class ChecklistComponent extends LightningElement {
     }
     
     get isSubmitDisabled() {
-        return !this.signature || !this.allItemsChecked();
+        return !this.signature || !this.allItemsChecked() || this.hasCompletedChecklist;
+    }
+    
+    get formattedDate() {
+        return new Date().toLocaleDateString();
     }
     
     connectedCallback() {
-        getCurrentShift()
-            .then(result => {
-                this.selectedShift = result;
-                this.loadChecklistItems();
-            })
-            .catch(error => {
-                this.showToast('Error', error.body.message, 'error');
-            });
+        Promise.all([
+            getCurrentShift(),
+            getUserInfo()
+        ])
+        .then(results => {
+            this.selectedShift = results[0];
+            this.userName = results[1].Name;
+            this.loadChecklistItems();
+        })
+        .catch(error => {
+            this.showToast('Error', error.body.message, 'error');
+            this.isLoading = false;
+        });
     }
     
     loadChecklistItems() {
+        this.isLoading = true;
         if (this.selectedShift) {
             getChecklistItems({ shiftType: this.selectedShift })
                 .then(result => {
-                    this.checklistItems = result.map(item => {
-                        return {
-                            ...item,
-                            isCompleted: item.Status__c === 'Completed'
-                        };
-                    });
+                    if (result.items) {
+                        this.checklistItems = result.items.map(item => {
+                            return {
+                                ...item,
+                                isCompleted: item.Status__c === 'Completed'
+                            };
+                        });
+                    }
+                    
+                    this.hasCompletedChecklist = result.isCompleted;
+                    this.completedDate = result.completedDate;
+                    this.completedBy = result.completedBy;
+                    this.isLoading = false;
                 })
                 .catch(error => {
                     this.showToast('Error', error.body.message, 'error');
+                    this.isLoading = false;
                 });
         }
     }
@@ -77,12 +101,13 @@ export default class ChecklistComponent extends LightningElement {
     }
     
     allItemsChecked() {
-        return this.checklistItems.every(item => item.isCompleted);
+        return this.checklistItems.length > 0 && this.checklistItems.every(item => item.isCompleted);
     }
     
     handleSubmit() {
         if (!this.signature || !this.allItemsChecked()) return;
         
+        this.isLoading = true;
         saveChecklist({ 
             items: this.checklistItems, 
             shiftType: this.selectedShift,
@@ -95,6 +120,7 @@ export default class ChecklistComponent extends LightningElement {
             })
             .catch(error => {
                 this.showToast('Error', error.body.message, 'error');
+                this.isLoading = false;
             });
     }
     

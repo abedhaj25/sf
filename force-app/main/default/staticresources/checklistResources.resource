@@ -1,1 +1,0 @@
-Sample static resource content.
